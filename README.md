@@ -1,18 +1,20 @@
 # StudioSpace — Backend API
 
-StudioSpace is a studio rental and booking platform backend built with Node.js, Express.js, and MongoDB. It provides REST APIs for user authentication, studio management, bookings, host applications, and administrative operations.
+StudioSpace is a RESTful backend API for a creative studio rental and booking platform. It allows users to discover studios, manage bookings, and apply to become hosts. Hosts can manage their studio listings, while administrators can manage platform operations.
 
 ## Features
 
-- User registration and login with JWT authentication.
-- HTTP-only cookie-based authentication.
-- Google authentication support.
-- Studio creation, viewing, updating, and deletion.
-- Studio booking management.
-- Booking cancellation and host confirmation.
-- Host application and approval management.
-- Admin and host role-based access control.
-- MongoDB database integration.
+- **User Authentication:** Register and log in using JWT authentication.
+- **HTTP-Only Cookies:** Secure cookie-based authentication.
+- **Google Authentication:** Support for Google login.
+- **Studio Management:** Create, view, update, and delete studio listings.
+- **Booking Management:** Create and manage studio bookings.
+- **Booking Cancellation:** Allow eligible users to cancel bookings.
+- **Host Confirmation:** Hosts can manage booking requests.
+- **Host Applications:** Submit and manage host applications.
+- **Role-Based Authorization:** Separate permissions for users, hosts, and administrators.
+- **Events API:** Manage creative events and experiences.
+- **MongoDB Integration:** Store application data using MongoDB and Mongoose.
 
 ## Technology Stack
 
@@ -36,6 +38,7 @@ server/
 │   ├── models/
 │   │   ├── Booking.js
 │   │   ├── Contact.js
+│   │   ├── Event.js
 │   │   ├── HostApplication.js
 │   │   ├── Studio.js
 │   │   └── User.js
@@ -74,16 +77,16 @@ npm install
 
 Create a `.env` file in the project root directory.
 
-Add your MongoDB connection string:
+Configure the required environment variables:
 
 ```env
 PORT=5002
 MONGODB_URI=your_mongodb_connection_string
+JWT_SECRET=your_jwt_secret
+GOOGLE_CLIENT_ID=your_google_client_id
 ```
 
-Also configure the JWT secret and any other environment variables required by the backend source code.
-
-**Important:** Never share or upload your real `.env` file or database credentials to GitHub.
+Use the actual variable names required by the backend source code. Never upload real credentials or secret keys to GitHub.
 
 ### 5. Run the Development Server
 
@@ -91,9 +94,9 @@ Also configure the JWT secret and any other environment variables required by th
 npm run dev
 ```
 
-Backend API will run at:
+The backend API will run at:
 
-`http://localhost:5002`
+http://localhost:5002
 
 ## API Endpoints
 
@@ -135,21 +138,33 @@ Backend API will run at:
 | GET | `/api/host/application` | Get host application |
 | POST | `/api/host/apply` | Submit host application |
 
+### Events
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/events` | Get available events |
+| GET | `/api/host/events` | Get host events |
+| POST | `/api/events` | Create an event |
+| PUT | `/api/events/:id` | Update an event |
+| DELETE | `/api/events/:id` | Delete an event |
+
+*Note: Verify all endpoint paths and HTTP methods against the current backend source code before submission.*
+
 ## Authentication & Security
 
 - JWT-based authentication.
 - HTTP-only authentication cookies.
 - Protected routes using authentication middleware.
-- Role-based access for hosts and administrators.
+- Role-based access control for hosts and administrators.
 - CORS configured for the frontend application.
 
 ## Frontend Repository
 
 [StudioSpace Client](https://github.com/ikhoanulislam/studiospace-client)
 
-## Project Repository
+## Live Backend
 
-[StudioSpace Server](https://github.com/ikhoanulislam/studiospace-server)
+https://studiospace-server-5r5z.onrender.com
 
 ## Developer
 
