@@ -27,6 +27,7 @@ const User = require("./models/User");
 const Contact = require("./models/Contact");
 
 const HostApplication = require("./models/HostApplication");
+const Event = require("./models/Event");
 
 const authMiddleware = require("./middleware/auth");
 
@@ -415,6 +416,95 @@ app.put("/api/auth/profile", authMiddleware, async (req, res) => {
       success: false,
       message: "Something went wrong. Please try again.",
     });
+  }
+});
+
+// ==========================================
+// EVENTS & EXPERIENCES
+// ==========================================
+
+const getEventStatus = (event) => {
+  const now = new Date();
+  const start = new Date(event.date);
+  const end = new Date(event.endDate || event.date);
+  end.setHours(23, 59, 59, 999);
+  if (now < start) return "upcoming";
+  if (now <= end) return "ongoing";
+  return "past";
+};
+
+app.get("/api/events", async (req, res) => {
+  try {
+    const events = await Event.find().sort({ date: 1 }).lean();
+    return res.json({ success: true, data: events.map((event) => ({ ...event, status: getEventStatus(event) })) });
+  } catch (error) {
+    console.error("Get Events Error:", error.message);
+    return res.status(500).json({ success: false, message: "Unable to load events." });
+  }
+});
+
+app.get("/api/host/events", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user || (!user.isHost && user.role !== "admin")) return res.status(403).json({ success: false, message: "Host permission required." });
+    const filter = user.role === "admin" ? {} : { hostId: req.userId };
+    const events = await Event.find(filter).sort({ date: -1 }).lean();
+    return res.json({ success: true, data: events.map((event) => ({ ...event, status: getEventStatus(event) })) });
+  } catch (error) {
+    console.error("Host Events Error:", error.message);
+    return res.status(500).json({ success: false, message: "Unable to load your events." });
+  }
+});
+
+app.post("/api/events", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user || (!user.isHost && user.role !== "admin")) return res.status(403).json({ success: false, message: "Host permission required." });
+    const { title, description, location, date, endDate, image } = req.body;
+    if (![title, description, location, date].every((value) => typeof value === "string" && value.trim())) return res.status(400).json({ success: false, message: "Title, description, location and date are required." });
+    if (Number.isNaN(Date.parse(date)) || (endDate && (Number.isNaN(Date.parse(endDate)) || new Date(endDate) < new Date(date)))) return res.status(400).json({ success: false, message: "Please provide valid event dates." });
+    const event = await Event.create({ title: title.trim(), description: description.trim(), location: location.trim(), date, endDate: endDate || null, image: typeof image === "string" ? image.trim() : "", hostId: req.userId, hostName: user.name || "StudioSpace Host" });
+    return res.status(201).json({ success: true, data: { ...event.toObject(), status: getEventStatus(event) } });
+  } catch (error) {
+    console.error("Create Event Error:", error.message);
+    return res.status(500).json({ success: false, message: "Unable to create event." });
+  }
+});
+
+app.put("/api/events/:id", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user || (!user.isHost && user.role !== "admin")) return res.status(403).json({ success: false, message: "Host permission required." });
+    const event = await Event.findById(req.params.id);
+    if (!event) return res.status(404).json({ success: false, message: "Event not found." });
+    if (user.role !== "admin" && event.hostId.toString() !== req.userId) return res.status(403).json({ success: false, message: "You can only edit your own events." });
+    const fields = ["title", "description", "location", "date", "endDate", "image"];
+    fields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        event[field] = field === "endDate" && !req.body[field] ? null : req.body[field];
+      }
+    });
+    if (!event.title?.trim() || !event.description?.trim() || !event.location?.trim() || Number.isNaN(Date.parse(event.date)) || (event.endDate && new Date(event.endDate) < new Date(event.date))) return res.status(400).json({ success: false, message: "Please check the event details and dates." });
+    await event.save();
+    return res.json({ success: true, data: { ...event.toObject(), status: getEventStatus(event) } });
+  } catch (error) {
+    console.error("Update Event Error:", error.message);
+    return res.status(500).json({ success: false, message: "Unable to update event." });
+  }
+});
+
+app.delete("/api/events/:id", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user || (!user.isHost && user.role !== "admin")) return res.status(403).json({ success: false, message: "Host permission required." });
+    const event = await Event.findById(req.params.id);
+    if (!event) return res.status(404).json({ success: false, message: "Event not found." });
+    if (user.role !== "admin" && event.hostId.toString() !== req.userId) return res.status(403).json({ success: false, message: "You can only delete your own events." });
+    await event.deleteOne();
+    return res.json({ success: true, message: "Event deleted." });
+  } catch (error) {
+    console.error("Delete Event Error:", error.message);
+    return res.status(500).json({ success: false, message: "Unable to delete event." });
   }
 });
 
