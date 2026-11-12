@@ -34,9 +34,14 @@ const adminMiddleware = require("./middleware/admin");
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://studiospace-client-swart.vercel.app",
+];
+
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: allowedOrigins,
     credentials: true,
   })
 );
