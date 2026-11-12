@@ -805,7 +805,7 @@ app.post("/api/bookings", authMiddleware, async (req, res) => {
       !bookingDate ||
       !bookingTime ||
       price === undefined ||
-      Number(price) < 0
+      !Number.isFinite(Number(price)) || Number(price) < 0
     ) {
       return res.status(400).json({
         success: false,
