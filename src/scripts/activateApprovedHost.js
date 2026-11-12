@@ -9,7 +9,11 @@ const activateApprovedHost = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
 
-    const email = "ikhoanulislam@gmail.com";
+    const email = process.env.HOST_EMAIL?.trim().toLowerCase();
+
+    if (!email) {
+      throw new Error("Set HOST_EMAIL to the approved account email before running this script.");
+    }
 
     const user = await User.findOne({ email });
 

@@ -42,7 +42,17 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      const isProjectPreview =
+        typeof origin === "string" &&
+        /^https:\/\/studiospace-client-[a-z0-9-]+-ai-web-engineering\.vercel\.app$/.test(origin);
+
+      if (!origin || allowedOrigins.includes(origin) || isProjectPreview) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Origin is not allowed by CORS."));
+    },
     credentials: true,
   })
 );
@@ -1390,9 +1400,21 @@ app.get("/api/host/application", authMiddleware, async (req, res) => {
       userId: req.userId,
     });
 
+    // Repair legacy approved applications whose host flag was not activated.
+    let hostPermission = false;
+    if (application?.status === "approved") {
+      const user = await User.findById(req.userId);
+      if (user && user.isHost !== true) {
+        user.isHost = true;
+        await user.save();
+      }
+      hostPermission = Boolean(user && (user.isHost === true || user.role === "admin"));
+    }
+
     return res.status(200).json({
       success: true,
       data: application,
+      hostPermission,
     });
   } catch (error) {
     console.error("Host Status Error:", error.message);
