@@ -1,4 +1,4 @@
-﻿const { OAuth2Client } = require("google-auth-library");
+const { OAuth2Client } = require("google-auth-library");
 
 const cookieParser = require("cookie-parser");
 
@@ -96,6 +96,16 @@ app.get("/", (req, res) => {
 // USER SIGNUP
 // ==========================================
 
+app.get("/api/health", (req, res) => {
+  const isDatabaseConnected = mongoose.connection.readyState === 1;
+
+  return res.status(isDatabaseConnected ? 200 : 503).json({
+    success: isDatabaseConnected,
+    server: "running",
+    database: isDatabaseConnected ? "connected" : "disconnected",
+    timestamp: new Date().toISOString(),
+  });
+});
 app.post("/api/auth/signup", async (req, res) => {
   try {
     const { name, email, password } = req.body;
