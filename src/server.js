@@ -454,21 +454,51 @@ app.post("/api/studios", authMiddleware, async (req, res) => {
       description,
     } = req.body;
 
-    // Validate required fields
+    // Validate required fields and input types
     if (
-      !name?.trim() ||
-      !category?.trim() ||
-      !location?.trim() ||
-      price === undefined ||
-      Number(price) <= 0
+      typeof name !== "string" || !name.trim() || name.length > 100 ||
+      typeof category !== "string" || !category.trim() || category.length > 100 ||
+      typeof location !== "string" || !location.trim() || location.length > 200 ||
+      price === undefined || price === null || price === "" ||
+      !Number.isFinite(Number(price)) || Number(price) <= 0
     ) {
       return res.status(400).json({
         success: false,
-        message: "Please provide all required studio details.",
+        message: "Please provide valid studio details.",
       });
     }
 
-    // Find logged-in user
+    if (
+      securityDeposit !== undefined &&
+      (!Number.isFinite(Number(securityDeposit)) || Number(securityDeposit) < 0)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Security deposit must be a valid non-negative number.",
+      });
+    }
+
+    if (
+      capacity !== undefined &&
+      (!Number.isInteger(Number(capacity)) || Number(capacity) <= 0)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Capacity must be a positive whole number.",
+      });
+    }
+
+    if (
+      amenities !== undefined &&
+      (!Array.isArray(amenities) ||
+        !amenities.every((item) => typeof item === "string"))
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Amenities must be a list of text values.",
+      });
+    }
+// Find logged-in user
     const user = await User.findById(req.userId);
 
     if (!user) {
@@ -600,6 +630,42 @@ app.put("/api/studios/:id", authMiddleware, async (req, res) => {
         message: "You are not allowed to update this studio.",
       });
     }
+    // Validate studio update fields before saving
+    if (name !== undefined && (typeof name !== "string" || !name.trim() || name.length > 100)) {
+      return res.status(400).json({ success: false, message: "Studio name must be valid and under 100 characters." });
+    }
+
+    if (category !== undefined && (typeof category !== "string" || !category.trim() || category.length > 100)) {
+      return res.status(400).json({ success: false, message: "Studio category must be valid and under 100 characters." });
+    }
+
+    if (location !== undefined && (typeof location !== "string" || !location.trim() || location.length > 200)) {
+      return res.status(400).json({ success: false, message: "Studio location must be valid and under 200 characters." });
+    }
+
+    if (price !== undefined && (price === null || price === "" || !Number.isFinite(Number(price)) || Number(price) <= 0)) {
+      return res.status(400).json({ success: false, message: "Price must be a valid positive number." });
+    }
+
+    if (securityDeposit !== undefined && (securityDeposit === null || securityDeposit === "" || !Number.isFinite(Number(securityDeposit)) || Number(securityDeposit) < 0)) {
+      return res.status(400).json({ success: false, message: "Security deposit must be a valid non-negative number." });
+    }
+
+    if (capacity !== undefined && (capacity === null || capacity === "" || !Number.isInteger(Number(capacity)) || Number(capacity) <= 0)) {
+      return res.status(400).json({ success: false, message: "Capacity must be a positive whole number." });
+    }
+
+    if (amenities !== undefined && (!Array.isArray(amenities) || !amenities.every((item) => typeof item === "string"))) {
+      return res.status(400).json({ success: false, message: "Amenities must be a list of text values." });
+    }
+
+    if (image !== undefined && (typeof image !== "string" || image.length > 2000)) {
+      return res.status(400).json({ success: false, message: "Invalid studio image URL." });
+    }
+
+    if (description !== undefined && (typeof description !== "string" || description.length > 3000)) {
+      return res.status(400).json({ success: false, message: "Description must be under 3000 characters." });
+    }
 
     if (name !== undefined) studio.name = name.trim();
     if (category !== undefined) studio.category = category.trim();
@@ -612,8 +678,8 @@ app.put("/api/studios/:id", authMiddleware, async (req, res) => {
 
     if (capacity !== undefined) studio.capacity = Number(capacity);
     if (amenities !== undefined) studio.amenities = amenities;
-    if (image !== undefined) studio.image = image;
-    if (description !== undefined) studio.description = description;
+    if (image !== undefined) studio.image = image.trim();
+    if (description !== undefined) studio.description = description.trim();
 
     await studio.save();
 
